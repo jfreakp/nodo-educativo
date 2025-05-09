@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización con D3.js</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .node {
+            fill: lightblue;
+            stroke: black;
+            stroke-width: 1.5px;
+        }
+
+        .link {
+            stroke: gray;
+            stroke-width: 2px;
+        }
+
+        .label {
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style> 
+</head>
+
+<body>
+    <h1>Consumo de la API</h1>
+    <h1>Datos de Profesores</h1>
+    <hr>
+    <svg width="600" height="400"></svg>
+
+
+    <div id="resultado"></div>
+    <script type="module">
+        let graph = {
+            "nodes": [
+            ],
+            "links": [
+
+            ]
+        };
+
+        async function obtenerGraph() {
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: 'http://localhost:8080/api/profesores/graph',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function (data) {
+                        resolve(data);
+                    },
+                    error: function (xhr, status, error) {
+                        reject(error);
+                    }
+                });
+            });
+        }
+
+        try {
+            graph = await obtenerGraph();
+            console.log(graph);
+        } catch (error) {
+            console.error('Error al obtener los datos:', error);
+            $('#resultado').text('Ocurrió un error al obtener los datos.');
+        }
+        // Configuración del SVG
+        const width = 600;
+        const height = 400;
+        const svg = d3.select("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Crear el gráfico de fuerza
+        const simulation = d3.forceSimulation(graph.nodes)
+            .force("link", d3.forceLink(graph.links).id(d => d.id).distance(150))
+            .force("charge", d3.forceManyBody().strength(-200))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        // Crear los enlaces (links)
+        const link = svg.append("g")
+            .selectAll(".link")
+            .data(graph.links)
+            .enter().append("line")
+            .attr("class", "link");
+        const linkLabels = svg.append("g")
+            .selectAll(".link-label")
+            .data(graph.links)
+            .enter().append("text")
+            .attr("class", "link-label")
+            .attr("font-size", "12px")
+            .attr("fill", "black")
+            .attr("text-anchor", "middle")
+            .text(d => d.type);
+
+        // Crear los nodos
+        const node = svg.append("g")
+            .selectAll(".node")
+            .data(graph.nodes)
+            .enter().append("circle")
+            .attr("class", "node")
+            .attr("r", 20)
+            .call(d3.drag()
+                .on("start", dragStarted)
+                .on("drag", dragging)
+                .on("end", dragEnded));
+
+        // Etiquetas de los nodos
+        svg.selectAll(".label")
+            .data(graph.nodes)
+            .enter().append("text")
+            .attr("class", "label")
+            .attr("dx", 25)
+            .attr("dy", 5)
+            .text(d => d.label);
+
+        // Actualización de posiciones en cada tick de la simulación
+        simulation.on("tick", function () {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+
+            svg.selectAll(".label")
+                .attr("x", d => d.x)
+                .attr("y", d => d.y);
+
+            linkLabels
+                .attr("x", d => (d.source.x + d.target.x) / 2)
+                .attr("y", d => (d.source.y + d.target.y) / 2);
+        });
+
+        // Funciones de drag
+        function dragStarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragging(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragEnded(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    </script>
+</body>
+
+</html>

@@ -1,4 +1,4 @@
-package com.jfreakp.user.model;
+																																	package com.jfreakp.user.model;
 
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
