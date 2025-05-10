@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
@@ -26,12 +27,12 @@ public class GraphService {
     public GraphResponse getGraph() {
         try (Session session = driver.session()) {
             Result result = session.run("MATCH (p)-[r]->(o) RETURN p, r, o LIMIT 25");
-
             Map<String, NodeDTO> nodeMap = new HashMap<>();
             List<LinkDTO> links = new ArrayList<>();
 
             while (result.hasNext()) {
                 var record = result.next();
+                System.out.print(record.get("name", 0));
                 var pNode = record.get("p").asNode();
                 var oNode = record.get("o").asNode();
                 var rel = record.get("r").asRelationship();
@@ -39,8 +40,8 @@ public class GraphService {
                 String pId = String.valueOf(pNode.id());
                 String oId = String.valueOf(oNode.id());
 
-                nodeMap.putIfAbsent(pId, new NodeDTO(pId, pNode.labels().iterator().next()));
-                nodeMap.putIfAbsent(oId, new NodeDTO(oId, oNode.labels().iterator().next()));
+                nodeMap.putIfAbsent(pId, new NodeDTO(pId, pNode.labels().iterator().next(),pNode.get("name").asString()));
+                nodeMap.putIfAbsent(oId, new NodeDTO(oId, oNode.labels().iterator().next(),pNode.get("name").asString()));
 
                 links.add(new LinkDTO(pId, oId, rel.type()));
             }
